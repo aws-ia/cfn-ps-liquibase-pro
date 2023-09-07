@@ -223,7 +223,7 @@ Parameters:
       The Quick Start bucket name can include numbers, lowercase
       letters, uppercase letters, and hyphens (-). It cannot start or end with a
       hyphen (-).
-    Default: aws-quickstart
+    Default: aws-ia-us-east-1
   IsAutomatedTest:
     Description: >-
       Choose yes for automated CI/CD testing to skip deployment of the
