@@ -1,0 +1,771 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: AWS CloudFormation Template to build a Liquibase Pro project with AWS CodePipeline in AWS. (qs-1smgd1p5p)
+Metadata:
+  QuickStartDocumentation:
+    EntrypointName: Launch into an existing VPC
+    Order: 2
+  LintSpellExclude:
+    - Liquibase
+  SentenceCaseExclude:
+    - Pro
+    - Production
+    - Staging
+    - Test
+  LICENSE: Apache License, Version 2.0
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Project configuration
+        Parameters:
+          - ProjectName
+          - CodePipelineS3BucketName
+      - Label:
+          default: Liquibase configuration
+        Parameters:
+          - LiquibaseProKey
+      - Label:
+          default: Network configuration
+        Parameters:
+          - VPCID
+          - PrivateSubnet01
+          - PrivateSubnet02
+      - Label:
+          default: Database configuration
+        Parameters:
+          - DatabaseUsernameTest
+          - DatabasePasswordTest
+          - DatabaseUsernameStage
+          - DatabasePasswordStage
+          - DatabaseUsernameProd
+          - DatabasePasswordProd
+          - DatabaseInstanceClass
+          - DatabaseEngineVersion
+          - DatabasePort
+          - DatabaseStorageType
+          - DatabaseAllocatedStorage
+          - DatabaseBackupRetentionPeriod
+      - Label:
+          default: AWS Quick Start configuration
+        Parameters:
+          - QSS3BucketName
+      - Label:
+          default: Automated testing configuration
+        Parameters:
+          - IsAutomatedTest
+    ParameterLabels:
+      CodePipelineS3BucketName:
+        default: Code Pipeline S3 bucket name for storing artifacts
+      DatabaseUsernameStage:
+        default: Database username for Staging
+      DatabasePasswordStage:
+        default: Database password for Staging
+      DatabaseUsernameTest:
+        default: Database username for Test
+      DatabasePasswordTest:
+        default: Database password for Test
+      DatabaseUsernameProd:
+        default: Database username for Production
+      DatabasePasswordProd:
+        default: Database password for Production
+      DatabaseInstanceClass:
+        default: Database instance class
+      DatabaseEngineVersion:
+        default: Database engine version
+      DatabasePort:
+        default: Database TCP listening port
+      DatabaseStorageType:
+        default: Database storage type
+      DatabaseAllocatedStorage:
+        default: Database allocated storage
+      DatabaseBackupRetentionPeriod:
+        default: Database backup retention period
+      LiquibaseProKey:
+        default: Liquibase Pro key
+      PrivateSubnet01:
+        default: Private subnet 1 ID
+      PrivateSubnet02:
+        default: Private subnet 2 ID
+      ProjectName:
+        default: Project name
+      QSS3BucketName:
+        default: Quick Start S3 bucket name
+      VPCID:
+        default: VPC ID
+      IsAutomatedTest:
+        default: Is this an automated test?
+Parameters:
+  LiquibaseProKey:
+    Description: >-
+      Enter your Liquibase Pro key here. If you don't have one, visit
+      https://download.liquibase.org/liquibase-pro-trial-request-form/ to start
+      a free trial.
+    Type: String
+    NoEcho: true
+  DatabaseUsernameProd:
+    Description: Database username for Production.
+    Type: String
+    MinLength: 1
+    MaxLength: 16
+    AllowedPattern: ^[a-zA-Z][a-zA-Z0-9]*$
+    ConstraintDescription: >-
+      1 to 16 alphanumeric characters. First character must be a letter.
+    Default: postgres
+  DatabasePasswordProd:
+    Description: Database password for Production.
+    Type: String
+    MinLength: 8
+    MaxLength: 128
+    AllowedPattern: ^[^/'\"@]+$
+    ConstraintDescription: >-
+      8 to 128 printable ASCII characters. Can''t contain any of the following:
+      slash (/), single quote (''), double quote ("), or at sign (@).
+    NoEcho: true
+  DatabaseUsernameStage:
+    Description: Database username for Staging.
+    Type: String
+    MinLength: 1
+    MaxLength: 16
+    AllowedPattern: ^[a-zA-Z][a-zA-Z0-9]*$
+    ConstraintDescription: >-
+      1 to 16 alphanumeric characters. First character must be a letter.
+    Default: postgres
+  DatabasePasswordStage:
+    Description: Database password for Staging.
+    Type: String
+    MinLength: 8
+    MaxLength: 128
+    AllowedPattern: ^[^/'\"@]+$
+    ConstraintDescription: >-
+      8 to 128 printable ASCII characters. Can''t contain any of the following:
+      slash (/), single quote (''), double quote ("), or at sign (@).
+    NoEcho: true
+  DatabaseUsernameTest:
+    Description: Database username for Test.
+    Type: String
+    MinLength: 1
+    MaxLength: 16
+    AllowedPattern: ^[a-zA-Z][a-zA-Z0-9]*$
+    ConstraintDescription: >-
+      1 to 16 alphanumeric characters. First character must be a letter.
+    Default: postgres
+  DatabasePasswordTest:
+    Description: Database password for Test.
+    Type: String
+    MinLength: 8
+    MaxLength: 128
+    AllowedPattern: ^[^/'\"@]+$
+    ConstraintDescription: >-
+      8 to 128 printable ASCII characters. Can't contain any of the following:
+      slash (/), single quote (''), double quote ("), or at sign (@).
+    NoEcho: true
+  DatabaseInstanceClass:
+    Description: Database instance class.
+    Type: String
+    Default: db.t3.micro
+  DatabaseEngineVersion:
+    Description: Database engine version.
+    Type: String
+    Default: 12.11
+  DatabasePort:
+    Description: Database TCP listening port.
+    Type: Number
+    MinValue: 1150
+    MaxValue: 65535
+    Default: 5432
+  DatabaseStorageType:
+    Description: Database storage type.
+    Type: String
+    Default: gp2
+  DatabaseAllocatedStorage:
+    Description: Database allocated storage.
+    Type: Number
+    MinValue: 20
+    MaxValue: 65536
+    Default: 20
+  DatabaseBackupRetentionPeriod:
+    Description: Database backup retention period.
+    Type: Number
+    Default: 7
+  ProjectName:
+    Description: Project name used in resource names and descriptions.
+    Type: String
+    MinLength: 1
+    MaxLength: 48
+    AllowedPattern: ^[a-z][a-z0-9-]*$
+    ConstraintDescription: >-
+      1 to 48 lowercase alphanumeric characters and hyphens (-). First
+      character must be a letter.
+    Default: liquibase-pro-sample
+  VPCID:
+    Description: ID of the VPC (e.g., vpc-0343606e).
+    Type: AWS::EC2::VPC::Id
+  PrivateSubnet01:
+    Description: The subnet for the DB cluster.
+    Type: AWS::EC2::Subnet::Id
+    Default: subnet-ID
+  PrivateSubnet02:
+    Description: The subnet for the DB cluster.
+    Type: AWS::EC2::Subnet::Id
+    Default: subnet-ID
+  QSS3BucketName:
+    Description: >-
+      Name of the S3 bucket for your copy of the Quick Start assets.
+      Keep the default name unless you are customizing the template.
+      Changing the name updates code references to point to a new Quick
+      Start location. This name can include numbers, lowercase letters,
+      uppercase letters, and hyphens, but do not start or end with a hyphen (-).
+      See https://aws-quickstart.github.io/option1.html.
+    Type: String
+    MinLength: 3
+    MaxLength: 63
+    AllowedPattern: ^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$
+    ConstraintDescription: >-
+      The Quick Start bucket name can include numbers, lowercase
+      letters, uppercase letters, and hyphens (-). It cannot start or end with a
+      hyphen (-).
+    Default: aws-ia-us-east-1
+  IsAutomatedTest:
+    Description: >-
+      Choose yes for automated CI/CD testing to skip deployment of the
+      AWS CodePipeline pipeline and Amazon EventBridge rule. This was
+      implemented because 1/ the pipeline includes stages that require manual
+      approval, and 2/ the AWS CodeBuild stages build containers with elastic
+      network interfaces (ENIs) attached to the CodeBuildSecurityGroup
+      resource. As of 2022-03-31, when this type of CodeBuild job is
+      interrupted, the ENI is orphaned while still attached to the security
+      group, which will cause stack deletion to fail.
+    Type: String
+    AllowedValues:
+      - 'yes'
+      - 'no'
+    Default: 'no'
+  CodePipelineS3BucketName:
+    Description: >-
+      Name of the S3 bucket to store artifacts from CodePipeline.
+      If you leave this parameter empty, a new bucket will be created for you via CloudFormation.
+      If using a CloudFormation-generated bucket, the contents of the bucket must be deleted prior to deleting the stack.
+      This name can include numbers, lowercase letters,
+      uppercase letters, and hyphens, but do not start or end with a hyphen (-).
+      See https://aws-quickstart.github.io/option1.html.
+    Type: String
+    Default: ""
+Conditions:
+  Deploy: !Not [!Equals [!Ref IsAutomatedTest, 'yes']]
+  IsCodePipelineS3BucketEmpty:  !Equals [!Ref "CodePipelineS3BucketName", ""]
+Resources:
+  AWSSecrets:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: AWS secrets for project
+      Name: LIQUIBASEPRO-DEMO
+      SecretString: !Sub >-
+        {
+          "LIQUIBASE_PRO_KEY": "${LiquibaseProKey}",
+          "USERNAME_TEST": "${DatabaseUsernameTest}",
+          "PASSWORD_TEST": "${DatabasePasswordTest}",
+          "USERNAME_STAGE": "${DatabaseUsernameStage}",
+          "PASSWORD_STAGE": "${DatabasePasswordStage}",
+          "USERNAME_PROD": "${DatabaseUsernameProd}",
+          "PASSWORD_PROD": "${DatabasePasswordProd}"
+        }
+  CodeCommitRepository:
+    Type: AWS::CodeCommit::Repository
+    Properties:
+      Code:
+        BranchName: main
+        S3:
+          Bucket: !Ref QSS3BucketName
+          Key: quickstart-liquibase-pro/packages/codecommit/lambda.zip
+      RepositoryDescription: !Sub ${ProjectName}CodeRepo
+      RepositoryName: !Sub ${ProjectName}coderepo
+  CodeBuildImageRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - codebuild.amazonaws.com
+        Version: 2012-10-17
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/AWSCodeCommitReadOnly
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonS3ReadOnlyAccess
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonEC2ContainerRegistryPowerUser
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/SecretsManagerReadWrite
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonEC2FullAccess
+      Path: /
+      Policies:
+        - PolicyDocument:
+            Statement:
+              - Action:
+                  - logs:CreateLogGroup
+                  - logs:DescribeLogGroups
+                  - logs:CreateLogStream
+                  - logs:DescribeLogStreams
+                  - logs:PutLogEvents
+                Effect: Allow
+                Resource:
+                  - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:*
+            Version: 2012-10-17
+          PolicyName: !Sub ${ProjectName}-CodeBuild-ContainerImage-RolePolicy
+      RoleName: !Sub ${ProjectName}-CodeBuild-Role
+  CodeBuildImageJob:
+    Type: AWS::CodeBuild::Project
+    DependsOn: CodeBuildImageRole
+    Properties:
+      Artifacts:
+        ArtifactIdentifier: String
+        EncryptionDisabled: false
+        Location: !Ref QSS3BucketName
+        Name: codebuild-snapshot.zip
+        NamespaceType: NONE
+        OverrideArtifactName: true
+        Packaging: ZIP
+        Path: ''
+        Type: S3
+      Description: >-
+        CodeBuild Project to pull from a GIT repository containing Liquibase
+        project and a 'buildspec.yml' file.
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: registry.hub.docker.com/liquibase/liquibase:latest
+        ImagePullCredentialsType: SERVICE_ROLE
+        PrivilegedMode: true
+        Type: LINUX_CONTAINER
+      LogsConfig:
+        CloudWatchLogs:
+          Status: ENABLED
+        S3Logs:
+          EncryptionDisabled: false
+          Status: DISABLED
+      Name: !Sub ${ProjectName}-CodeBuild-Job
+      ServiceRole: !Sub ${ProjectName}-CodeBuild-Role
+      Source:
+        GitCloneDepth: 1
+        GitSubmodulesConfig:
+          FetchSubmodules: false
+        InsecureSsl: false
+        Location: !GetAtt CodeCommitRepository.CloneUrlHttp
+        Type: CODECOMMIT
+      SourceVersion: refs/heads/main
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref CodeBuildSecurityGroup
+        Subnets:
+          - !Ref PrivateSubnet01
+          - !Ref PrivateSubnet02
+        VpcId: !Ref VPCID
+  EventBridgeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - events.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+  EventBridgeRule:
+    Type: AWS::Events::Rule
+    Condition: Deploy
+    Properties:
+      EventPattern:
+        source:
+          - aws.codecommit
+        detail-type:
+          - CodeCommit Repository State Change
+        resources:
+          - !Sub arn:${AWS::Partition}:codecommit:${AWS::Region}:${AWS::AccountId}:${ProjectName}coderepo
+        detail:
+          event:
+            - referenceCreated
+            - referenceUpdated
+          referenceType:
+            - branch
+          referenceName:
+            - main
+      Targets:
+        - Arn: !Sub arn:${AWS::Partition}:codepipeline:${AWS::Region}:${AWS::AccountId}:${CodePipelineImage}
+          RoleArn: !GetAtt EventBridgeRole.Arn
+          Id: codepipeline-CodePipelineImage
+  QSCodePipelineS3Bucket:
+    Type: AWS::S3::Bucket
+    Condition: IsCodePipelineS3BucketEmpty
+    Properties: 
+      BucketName: !Sub ${ProjectName}-codepipeline-bucket  
+  CodePipelineServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: codepipeline.amazonaws.com
+        Version: 2012-10-17
+      MaxSessionDuration: 3600
+      Path: /
+      Policies:
+        - PolicyName: AWS-CodePipeline-Service-3
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - codecommit:CancelUploadArchive
+                  - codecommit:GetBranch
+                  - codecommit:GetCommit
+                  - codecommit:GetUploadArchiveStatus
+                  - codecommit:UploadArchive
+                Resource:
+                  - !Sub arn:${AWS::Partition}:codecommit:${AWS::Region}:${AWS::AccountId}:${ProjectName}coderepo
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:GetBucketVersioning
+                  - s3:PutObjectAcl
+                  - s3:PutObject
+                Resource:
+                  - !If [IsCodePipelineS3BucketEmpty, !Sub 'arn:${AWS::Partition}:s3:::${QSCodePipelineS3Bucket}', !Sub 'arn:${AWS::Partition}:s3:::${CodePipelineS3BucketName}']
+                  - !If [IsCodePipelineS3BucketEmpty, !Sub 'arn:${AWS::Partition}:s3:::${QSCodePipelineS3Bucket}/*', !Sub 'arn:${AWS::Partition}:s3:::${CodePipelineS3BucketName}/*']
+              - Effect: Allow
+                Action:
+                  - codebuild:BatchGetBuilds
+                  - codebuild:StartBuild
+                Resource:
+                  - !Sub arn:${AWS::Partition}:codebuild:${AWS::Region}:${AWS::AccountId}:project/${ProjectName}-CodeBuild-Job
+      RoleName: !Sub ${ProjectName}-CodePipeline-Role
+  CodePipelineImage:
+    Type: AWS::CodePipeline::Pipeline
+    Condition: Deploy
+    Properties:
+      ArtifactStore:
+        Location: !If [IsCodePipelineS3BucketEmpty, !Ref QSCodePipelineS3Bucket, !Ref CodePipelineS3BucketName]
+        Type: S3
+      Name: !Sub ${ProjectName}-CodePipeline
+      RoleArn: !GetAtt CodePipelineServiceRole.Arn
+      Stages:
+        - Actions:
+            - ActionTypeId:
+                Category: Source
+                Owner: AWS
+                Provider: CodeCommit
+                Version: 1
+              Configuration:
+                BranchName: main
+                OutputArtifactFormat: CODE_ZIP
+                PollForSourceChanges: false
+                RepositoryName: !Sub ${ProjectName}coderepo
+              InputArtifacts: []
+              Name: Source
+              Namespace: SourceVariables
+              OutputArtifacts:
+                - Name: SourceArtifact
+              Region: !Ref AWS::Region
+              RunOrder: 1
+          Name: Source
+        - Actions:
+            - ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: 1
+              Configuration:
+                EnvironmentVariables: !Sub >-
+                  [
+                    {
+                      "name": "LIQUIBASE_COMMAND_URL",
+                      "value": "jdbc:postgresql://${RDSInstanceTest.Endpoint.Address}:${DatabasePort}/postgres",
+                      "type": "PLAINTEXT"
+                    },
+                    {
+                      "name": "LIQUIBASE_COMMAND_USERNAME",
+                      "value": "LIQUIBASEPRO-DEMO:USERNAME_TEST",
+                      "type": "SECRETS_MANAGER"
+                    },
+                    {
+                      "name": "LIQUIBASE_COMMAND_PASSWORD",
+                      "value": "LIQUIBASEPRO-DEMO:PASSWORD_TEST",
+                      "type": "SECRETS_MANAGER"
+                    }
+                  ]
+                ProjectName: !Sub ${ProjectName}-CodeBuild-Job
+              InputArtifacts:
+                - Name: SourceArtifact
+              Name: Build
+              OutputArtifacts: []
+              Region: !Ref AWS::Region
+              RunOrder: 1
+          Name: Build
+        - Actions:
+            - ActionTypeId:
+                Category: Approval
+                Owner: AWS
+                Provider: Manual
+                Version: 1
+              Configuration: {}
+              InputArtifacts: []
+              Name: Approval-Stage
+              OutputArtifacts: []
+              Region: !Ref AWS::Region
+              RunOrder: 1
+          Name: Approval-Stage
+        - Actions:
+            - ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: 1
+              Configuration:
+                EnvironmentVariables: !Sub >-
+                  [
+                    {
+                      "name": "LIQUIBASE_COMMAND_URL",
+                      "value": "jdbc:postgresql://${RDSInstanceStage.Endpoint.Address}:${DatabasePort}/postgres",
+                      "type": "PLAINTEXT"
+                    },
+                    {
+                      "name": "LIQUIBASE_COMMAND_USERNAME",
+                      "value": "LIQUIBASEPRO-DEMO:USERNAME_STAGE",
+                      "type": "SECRETS_MANAGER"
+                    },
+                    {
+                      "name": "LIQUIBASE_COMMAND_PASSWORD",
+                      "value": "LIQUIBASEPRO-DEMO:PASSWORD_STAGE",
+                      "type": "SECRETS_MANAGER"
+                    }
+                  ]
+                ProjectName: !Sub ${ProjectName}-CodeBuild-Job
+              InputArtifacts:
+                - Name: SourceArtifact
+              Name: Deploy-Stage
+              OutputArtifacts: []
+              Region: !Ref AWS::Region
+              RunOrder: 1
+          Name: Deploy-Stage
+        - Actions:
+            - ActionTypeId:
+                Category: Approval
+                Owner: AWS
+                Provider: Manual
+                Version: 1
+              Configuration: {}
+              InputArtifacts: []
+              Name: Approval-Prod
+              OutputArtifacts: []
+              Region: !Ref AWS::Region
+              RunOrder: 1
+          Name: Approval-Prod
+        - Actions:
+            - ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: 1
+              Configuration:
+                EnvironmentVariables: !Sub >-
+                  [
+                    {
+                      "name": "LIQUIBASE_COMMAND_URL",
+                      "value": "jdbc:postgresql://${RDSInstanceProd.Endpoint.Address}:${DatabasePort}/postgres",
+                      "type": "PLAINTEXT"
+                    },
+                    {
+                      "name": "LIQUIBASE_COMMAND_USERNAME",
+                      "value": "LIQUIBASEPRO-DEMO:USERNAME_PROD",
+                      "type": "SECRETS_MANAGER"
+                    },
+                    {
+                      "name": "LIQUIBASE_COMMAND_PASSWORD",
+                      "value": "LIQUIBASEPRO-DEMO:PASSWORD_PROD",
+                      "type": "SECRETS_MANAGER"
+                    }
+                  ]
+                ProjectName: !Sub ${ProjectName}-CodeBuild-Job
+              InputArtifacts:
+                - Name: SourceArtifact
+              Name: Deploy-Prod
+              OutputArtifacts: []
+              Region: !Ref AWS::Region
+              RunOrder: 1
+          Name: Deploy-Prod
+  RDSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub ${ProjectName}-SecurityGroup for RDS
+      GroupName: !Sub ${ProjectName}-RDSSecurityGroup
+      VpcId: !Ref VPCID
+  RDSSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref RDSSecurityGroup
+      IpProtocol: tcp
+      FromPort: !Ref DatabasePort
+      ToPort: !Ref DatabasePort
+      SourceSecurityGroupId: !Ref CodeBuildSecurityGroup
+  RDSSecurityGroupEgress:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref RDSSecurityGroup
+      Description: >-
+        Placeholder rule to disable CloudFormation default open outbound/egress
+      IpProtocol: icmp
+      FromPort: 8
+      ToPort: 8
+      CidrIp: 127.0.0.1/32
+  CodeBuildSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub ${ProjectName}-SecurityGroup for CodeBuild
+      GroupName: !Sub ${ProjectName}-CodeBuildSecurityGroup
+      VpcId: !Ref VPCID
+  CodeBuildSecurityGroupEgress:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref CodeBuildSecurityGroup
+      IpProtocol: -1
+      CidrIp: 0.0.0.0/0
+  RDSDBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnet group for Postgres Databases
+      DBSubnetGroupName: !Sub ${ProjectName}-database-subnet-group
+      SubnetIds:
+        - !Ref PrivateSubnet01
+        - !Ref PrivateSubnet02
+  RDSInstanceProd:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      AllocatedStorage: !Ref DatabaseAllocatedStorage
+      AutoMinorVersionUpgrade: true
+      BackupRetentionPeriod: !Ref DatabaseBackupRetentionPeriod
+      CopyTagsToSnapshot: true
+      DBInstanceClass: !Ref DatabaseInstanceClass
+      DBInstanceIdentifier: !Sub ${ProjectName}-prod
+      Engine: postgres
+      EngineVersion: !Ref DatabaseEngineVersion
+      DBSubnetGroupName: !Ref RDSDBSubnetGroup
+      VPCSecurityGroups:
+        - !Ref RDSSecurityGroup
+      MasterUsername: !Sub ${DatabaseUsernameProd}
+      MasterUserPassword: !Sub ${DatabasePasswordProd}
+      PubliclyAccessible: false
+      StorageType: !Ref DatabaseStorageType
+      Port: !Ref DatabasePort
+  RDSInstanceStage:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      AllocatedStorage: !Ref DatabaseAllocatedStorage
+      AutoMinorVersionUpgrade: true
+      BackupRetentionPeriod: !Ref DatabaseBackupRetentionPeriod
+      CopyTagsToSnapshot: true
+      DBInstanceClass: !Ref DatabaseInstanceClass
+      DBInstanceIdentifier: !Sub ${ProjectName}-stage
+      Engine: postgres
+      EngineVersion: !Ref DatabaseEngineVersion
+      DBSubnetGroupName: !Ref RDSDBSubnetGroup
+      VPCSecurityGroups:
+        - !Ref RDSSecurityGroup
+      MasterUsername: !Sub ${DatabaseUsernameStage}
+      MasterUserPassword: !Sub ${DatabasePasswordStage}
+      PubliclyAccessible: false
+      StorageType: !Ref DatabaseStorageType
+      Port: !Ref DatabasePort
+  RDSInstanceTest:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      AllocatedStorage: !Ref DatabaseAllocatedStorage
+      AutoMinorVersionUpgrade: true
+      BackupRetentionPeriod: !Ref DatabaseBackupRetentionPeriod
+      CopyTagsToSnapshot: true
+      DBInstanceClass: !Ref DatabaseInstanceClass
+      DBInstanceIdentifier: !Sub ${ProjectName}-test
+      Engine: postgres
+      EngineVersion: !Ref DatabaseEngineVersion
+      DBSubnetGroupName: !Ref RDSDBSubnetGroup
+      VPCSecurityGroups:
+        - !Ref RDSSecurityGroup
+      MasterUsername: !Sub ${DatabaseUsernameTest}
+      MasterUserPassword: !Sub ${DatabasePasswordTest}
+      PubliclyAccessible: false
+      StorageType: !Ref DatabaseStorageType
+      Port: !Ref DatabasePort
+Outputs:
+  AWSSecrets:
+    Description: AWS secrets for project.
+    Value: !Ref AWSSecrets
+    Export:
+      Name: LIQUIBASEPRO-DEMO
+  CodeCommitRepository:
+    Description: Code Commmit Repository for housing Liquibase Pro project.
+    Value: !Ref CodeCommitRepository
+    Export:
+      Name: !Sub ${ProjectName}coderepo
+  CodeBuildImageRole:
+    Description: Code Build Image role name.
+    Value: !Ref CodeBuildImageRole
+    Export:
+      Name: !Sub ${ProjectName}-CodeBuild-Role
+  CodeBuildImageJob:
+    Description: Code Build Image job name.
+    Value: !Ref CodeBuildImageJob
+    Export:
+      Name: !Sub ${ProjectName}-CodeBuild-Job
+  QSCodePipelineS3Bucket:
+    Condition: IsCodePipelineS3BucketEmpty
+    Description: Code Pipeline S3 Bucket.
+    Value: !Ref QSCodePipelineS3Bucket
+    Export:
+      Name: !Sub ${ProjectName}-codepipeline-bucket
+  CodePipelineServiceRole:
+    Description: Code Pipeline Service Role.
+    Value: !Ref CodePipelineServiceRole
+    Export:
+      Name: !Sub ${ProjectName}-CodePipeline-Role
+  CodePipelineImage:
+    Description: Code Pipeline Image name.
+    Condition: Deploy
+    Value: !Ref CodePipelineImage
+    Export:
+      Name: !Sub ${ProjectName}-CodePipeline
+  CodeBuildSecurityGroup:
+    Description: CodeBuild Security Group name.
+    Value: !Ref CodeBuildSecurityGroup
+    Export:
+      Name: !Sub ${ProjectName}-CodeBuildSecurityGroup
+  RDSSecurityGroup:
+    Description: RDS Security Group name.
+    Value: !Ref RDSSecurityGroup
+    Export:
+      Name: !Sub ${ProjectName}-RDSSecurityGroup
+  RDSDBSubnetGroup:
+    Description: RDS DB Subnet Group.
+    Value: !Ref RDSDBSubnetGroup
+    Export:
+      Name: !Sub ${ProjectName}-DBSubnetGroup
+  RDSInstanceProd:
+    Description: RDS Prod Instance name.
+    Value: !Ref RDSInstanceProd
+    Export:
+      Name: !Sub ${ProjectName}-prod
+  RDSInstanceStage:
+    Description: RDS Stage Instance name.
+    Value: !Ref RDSInstanceStage
+    Export:
+      Name: !Sub ${ProjectName}-stage
+  RDSInstanceTest:
+    Description: RDS Test Instance name.
+    Value: !Ref RDSInstanceTest
+    Export:
+      Name: !Sub ${ProjectName}-test
+  Postdeployment:
+    Description: See the deployment guide for post-deployment steps.
+    Value: https://aws-quickstart.github.io/quickstart-liquibase-pro/#_postdeployment_steps

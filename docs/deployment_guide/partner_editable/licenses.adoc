@@ -1,3 +1,5 @@
 // Include details about any licenses and how to sign up. Provide links as appropriate.
 
-There is no cost to use this Partner Solution, but you will be billed for any AWS services or resources that this Partner Solution deploys. For more information, refer to the https://fwd.aws/rA69w?[AWS Partner Solution General Information Guide^].
+A Liquibase Pro License is required to use this Quick Start. For more information, refer to https://www.liquibase.com/trial[Get Started with Liquibase Pro^].
+
+You are responsible for the cost of the AWS services and any third-party licenses used while running this Quick Start reference deployment. There is no additional cost for using the Quick Start.

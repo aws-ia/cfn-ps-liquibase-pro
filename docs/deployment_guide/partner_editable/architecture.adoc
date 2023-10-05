@@ -1,28 +1,23 @@
 :xrefstyle: short
 
-Deploying this Partner Solution with default parameters builds the following {partner-product-short-name} environment in the
-AWS Cloud.
+Deploy this Quick Start for a new {partner-product-name} pipeline with deployments to three AWS RDS PostgreSQL databases. Choose between using an existing virtual private cloud (VPC) or creating a new VPC. The pipeline includes an AWS CodePipeline with AWS CodeBuild Stages and approval gates to deploy a series of scripts using {partner-product-name}.
 
-// Replace this example diagram with your own. Follow our wiki guidelines: https://w.amazon.com/bin/view/AWS_Quick_Starts/Process_for_PSAs/#HPrepareyourarchitecturediagram. Upload your source PowerPoint file to the GitHub {deployment name}/docs/images/ directory in its repository.
+// Replace this example diagram with your own. Follow our wiki guidelines: https://w.amazon.com/bin/view/AWS_Quick_Starts/Process_for_PSAs/#HPrepareyourarchitecturediagram. Upload your source PowerPoint file to the GitHub {deployment name}/docs/images/ directory in this repo. 
 
 [#architecture1]
-.Partner Solution architecture for {partner-product-short-name} on AWS
+.Quick Start architecture for {partner-product-name} on AWS
 image::../docs/deployment_guide/images/architecture_diagram.png[Architecture]
 
-As shown in <<architecture1>>, this Partner Solution sets up the following:
+As shown in <<architecture1>>, this Quick Start sets up the following:
 
-* A highly available architecture that spans two Availability Zones.*
+* AWS Secrets Manager to store sensitive information, such as database user names, passwords, and the {partner-product-short-name} license key.
+* AWS CodeCommit to store and manage database scripts.
+* Amazon EventBridge to invoke new builds when the main branch is updated in the AWS CodeCommit repository.
+* AWS CodePipeline to model, visualize, and automate the steps required to release your software.
+* AWS CodeBuild to compile source code, runs unit tests, and produces artifacts that are ready to deploy.
+* Amazon Simple Storage Service (Amazon S3) for storing artifacts and logs for auditing purposes.
 * A virtual private cloud (VPC) configured with public and private subnets, according to AWS
 best practices, to provide you with your own virtual network on AWS.*
-* In the public subnets:
-** Managed network address translation (NAT) gateways to allow outbound
-internet access for resources in the private subnets.*
-** A Linux bastion host in an Auto Scaling group to allow inbound Secure
-Shell (SSH) access to Amazon Elastic Compute Cloud (Amazon EC2) instances in public and private subnets.*
-* In the private subnets:
-** <item>.
-** <item>.
-// Add bullet points for any additional components that are included in the deployment. Ensure that the additional components are shown in the architecture diagram. End each bullet with a period.
-* <describe any additional components>.
+* Inside the VPC, three Amazon Relational Database Service (Amazon RDS) PostgreSQL databases for testing, staging, and production environments.
 
-[.small]#* The template that deploys this Partner Solution into an existing VPC skips the components marked by asterisks and prompts you for your existing VPC configuration.#
+[.small]#* The template that deploys the Quick Start into an existing VPC skips the components marked by asterisks and prompts you for your existing VPC configuration.#
