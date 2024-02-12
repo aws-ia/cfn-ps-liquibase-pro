@@ -279,7 +279,7 @@ Parameters:
       The Quick Start bucket name can include numbers, lowercase
       letters, uppercase letters, and hyphens (-). It cannot start or end with a
       hyphen (-).
-    Default: aws-ia-us-east-1
+    Default: aws-ia
   QSS3KeyPrefix:
     Description:
       S3 key prefix that is used to simulate a directory for your copy of the
@@ -330,7 +330,7 @@ Parameters:
     Type: String
     Default: ""
 Conditions:
-  UsingDefaultBucket: !Equals [!Ref QSS3BucketName, aws-quickstart]
+  UsingDefaultBucket: !Equals [!Ref QSS3BucketName, aws-ia]
   IsCodePipelineS3BuckeEmpty:  !Equals [!Ref "CodePipelineS3BucketName", ""]
 Resources:
   VPCStack:
